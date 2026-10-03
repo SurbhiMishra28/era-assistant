@@ -1,0 +1,10 @@
+# generated at runtime — do not commit
+era-server.log
+server-startup.log
+db/*.db
+db/*.db-wal
+db/*.db-shm
+node_modules/
+nvcf.key
+.env
+certs/

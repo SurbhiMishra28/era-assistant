@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Era — Your Clinic Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"></head><body>
+
+<!-- ① AUTH — login / signup only -->
+<section id="auth" class="view"><div class="card">
+ <img class="logo" src="assets/era.png" alt="Era"><h1>Doctor Login</h1>
+ <p class="sub">Sign in to your RMS account.<br>New here? Your account is created automatically.</p>
+ <form id="loginF"><input id="liEmail" type="email" placeholder="you@rms.local" autocomplete="username" required>
+  <input id="liPass" type="password" placeholder="Password (min 4 chars)" autocomplete="current-password" required>
+  <button type="submit" id="loginBtn">Sign in / Sign up</button></form>
+ <p id="authMsg" class="authmsg" role="status"></p>
+ <div class="demorow"><label class="persona" for="persona">Demo:</label>
+  <select id="persona"><option value="doctorA">Dr. Amit (1)</option><option value="doctorB">Dr. Rahul (2)</option><option value="doctorC">Dr. Priya (3)</option><option value="admin">Admin</option><option value="reception">Front Desk</option></select>
+  <button type="button" id="demoBtn" class="linkbtn">try it</button></div>
+</div></section>
+
+<!-- ② WORKSPACE — Era's photo IS the interface (v3.7.2): pop-up greeting, voice-first.
+     The photo is the character — no SVG model. Tune size/framing via --eraPhotoW/H/X/Y in style.css. -->
+<main class="hidden">
+<section id="face" data-state="idle">
+ <div class="whorow"><p id="who" class="who"></p><button id="logout" class="mini" title="Sign out and clear the session cookie">Sign out</button></div>
+ <div class="stage"><i class="ring r1"></i><i class="ring r2"></i>
+  <div id="photoWrap"><img id="eraPhoto" src="assets/era3d.png" alt="Era, your AI clinic assistant"></div>
+ </div>
+ <div class="waves" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b></div>
+ <h2>Era</h2><p id="status">Ready</p>
+ <p id="live" class="sr-only" aria-live="polite"></p>
+ <div class="ctrl"><button id="mic" title="Talk to Era">🎤 Talk</button><button id="stop" title="Stop speaking">Stop</button><button id="openSet">⚙ Settings</button></div>
+ <div class="row"><input id="msg" placeholder="Or type — e.g. my appointments today" autocomplete="off"><button id="send">Send</button></div>
+</section>
+</main>
+<dialog id="set"><form method="dialog"><h3>Settings</h3>
+<label>Your name<input id="sName" placeholder="Dr. Sharma"></label>
+<label class="chk"><input type="checkbox" id="sVoice"> Era speaks replies</label>
+<label class="chk"><input type="checkbox" id="sGreet"> Greet me when I start</label>
+<label>NVIDIA Voice<select id="sVoiceSel"></select></label>
+<small>Era speaks ONLY in NVIDIA Sofia's voice — English, हिन्दी and Hinglish are picked automatically from each reply.</small>
+<div class="row"><button value="save" id="save">Save</button></div></form></dialog>
+<script src="db/db.js?v=4.0.0"></script><script src="app.js?v=4.0.0"></script></body></html>

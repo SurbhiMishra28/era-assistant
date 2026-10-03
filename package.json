@@ -1,0 +1,15 @@
+{
+  "name": "era-assistant",
+  "version": "3.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Era — AI face & voice clinic assistant. Static app + zero-dependency Node API server with SQLite.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/security.test.js",
+    "token": "node token.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
