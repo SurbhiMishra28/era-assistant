@@ -1,0 +1,488 @@
+.eraStageWrap {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.6rem, 2vw, 1.5rem);
+}
+
+.eraScrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 27, 25, 0.64);
+  backdrop-filter: blur(9px);
+}
+
+.eraStage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  width: min(1080px, 100%);
+  height: min(760px, calc(100dvh - 2rem));
+  min-height: 540px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 36px 110px rgba(0, 0, 0, 0.3);
+}
+
+.eraStageFace {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  overflow-y: auto;
+  color: #eafaf7;
+  text-align: center;
+  background:
+    radial-gradient(400px 310px at 90% 3%, rgba(44, 198, 167, 0.24), transparent 68%),
+    radial-gradient(440px 340px at 0% 100%, rgba(26, 99, 127, 0.25), transparent 70%),
+    linear-gradient(155deg, #123b36, #0b2625 75%);
+}
+
+.eraClose {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.eraClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.eraStageId {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.eraStageId h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.65rem;
+}
+
+.eraStage .facestatus {
+  margin-left: 0.3rem;
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  width: clamp(170px, 22vw, 238px);
+  aspect-ratio: 4 / 5;
+  margin: 0.4rem 0 0.7rem;
+  animation: none !important;
+  transform: none !important;
+  translate: none !important;
+  transition: none !important;
+}
+
+.photoWrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.2);
+  animation: none !important;
+  transform: none !important;
+  translate: none !important;
+  transition: none !important;
+}
+
+.photoWrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  animation: none !important;
+  transform: none !important;
+  translate: none !important;
+  transition: none !important;
+}
+
+.eraWho {
+  margin: 0;
+  color: rgba(234, 250, 247, 0.66);
+  font-size: 0.74rem;
+}
+
+.ctrl {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0.45rem 0;
+}
+
+.ctrl button {
+  min-height: 38px;
+  padding: 0.48rem 0.76rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  color: #eafaf7;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  font-size: 0.75rem;
+}
+
+.ctrl button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ctrl button#mic.on {
+  background: #b84646;
+}
+
+.ctrl button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.eraStageFace .row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 440px;
+  margin-top: 0.15rem;
+}
+
+.eraStageFace .row input {
+  min-width: 0;
+  min-height: 44px;
+  border-color: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: var(--ink);
+  background: #fff;
+  font-size: 0.8rem;
+}
+
+.eraStageFace .row button {
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.eraStageNote {
+  max-width: 440px;
+  min-height: 2em;
+  margin: 0;
+  color: rgba(234, 250, 247, 0.7);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.eraStageChat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background:
+    radial-gradient(440px 320px at 100% 0%, rgba(224, 244, 240, 0.42), transparent 72%),
+    #fff;
+}
+
+.cpTags {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 54px;
+  padding: 0.65rem 1rem;
+  overflow-x: auto;
+  border-bottom: 1px solid #edf2f0;
+}
+
+.eraHint {
+  color: #768983;
+  font-size: 0.75rem;
+}
+
+.chip,
+.chipdel {
+  min-height: 32px;
+  padding: 0.4rem 0.72rem;
+  border: 1px solid #e3ece9;
+  border-radius: 999px;
+  color: #5d736d;
+  background: #fff;
+  box-shadow: none;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.chip:hover,
+.chip.on {
+  border-color: #a6d7cb;
+  color: #136f61;
+  background: #eef8f5;
+  transform: none;
+}
+
+.chipdel {
+  min-width: 23px;
+  min-height: 23px;
+  margin-left: -0.4rem;
+  padding: 0.15rem;
+  border-color: transparent;
+  color: #b34f4f;
+  background: #fff1f0;
+}
+
+.cpLog {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 0;
+  padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.bub {
+  position: relative;
+  max-width: min(88%, 520px);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #edf2f0;
+  border-radius: 16px;
+  color: #334a44;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(15, 51, 46, 0.04);
+}
+
+.bub p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bub.user {
+  align-self: flex-end;
+  border-color: #d8eee7;
+  border-bottom-right-radius: 5px;
+  background: #eff9f5;
+}
+
+.bub.era {
+  border-bottom-left-radius: 5px;
+}
+
+.bub.err {
+  border-color: #f1d0ce;
+  color: #8e3430;
+  background: #fff8f7;
+}
+
+.bubbadge {
+  display: inline-block;
+  margin-top: 0.45rem;
+  color: #178367;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.tts {
+  width: 30px;
+  height: 30px;
+  margin: 0.3rem 0 0 -0.3rem;
+  padding: 0;
+  border-radius: 50%;
+  color: #188474;
+  background: #eaf6f2;
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+
+.tts:hover {
+  transform: none;
+  background: #dcefe9;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0.1rem 0.15rem;
+}
+
+.dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #55ad9a;
+}
+
+.sugs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  max-width: 100%;
+  margin-top: 0.2rem;
+}
+
+.sug {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #d8ebe5;
+  border-radius: 999px;
+  color: #3d7065;
+  background: #f5faf8;
+  box-shadow: none;
+  font-size: 0.72rem;
+}
+
+.sug:hover {
+  transform: none;
+  border-color: #a9d5c8;
+  background: #eaf6f1;
+}
+
+.eraStageWrap button:focus-visible,
+.eraStageWrap input:focus-visible {
+  outline: 3px solid #75ccb8;
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .eraStageWrap {
+    padding: 0.5rem;
+  }
+
+  .eraStage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    height: calc(100dvh - 1rem);
+    min-height: 0;
+    border-radius: 22px;
+  }
+
+  .eraStageFace {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-items: center;
+    justify-items: start;
+    gap: 0.5rem 0.8rem;
+    padding: 0.85rem 3.4rem 0.85rem 0.9rem;
+    text-align: left;
+  }
+
+  .eraClose {
+    top: 0.7rem;
+    right: 0.7rem;
+  }
+
+  .eraStageId {
+    grid-column: 2;
+    justify-content: flex-start;
+    align-self: end;
+  }
+
+  .stage {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 88px;
+    margin: 0;
+  }
+
+  .photoWrap {
+    border-radius: 16px;
+  }
+
+  .eraWho,
+  .ctrl {
+    grid-column: 2;
+    justify-self: start;
+    margin: 0;
+  }
+
+  .ctrl {
+    justify-content: flex-start;
+  }
+
+  .ctrl button {
+    min-height: 32px;
+    padding: 0.35rem 0.58rem;
+    font-size: 0.68rem;
+  }
+
+  .eraStageFace .row,
+  .eraStageNote {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .eraStageFace .row input {
+    min-height: 40px;
+  }
+
+  .eraStageFace .row button {
+    padding: 0.5rem 0.8rem;
+  }
+
+  .eraStageChat {
+    min-height: 0;
+  }
+
+  .cpTags {
+    min-height: 46px;
+    padding: 0.45rem 0.7rem;
+  }
+
+  .cpLog {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .eraStageFace {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 0.35rem 0.55rem;
+    padding-inline: 0.65rem;
+  }
+
+  .stage {
+    width: 76px;
+  }
+
+  .ctrl button {
+    padding-inline: 0.48rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eraStageWrap *,
+  .eraStageWrap *::before,
+  .eraStageWrap *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

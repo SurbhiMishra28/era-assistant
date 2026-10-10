@@ -1,0 +1,13 @@
+node_modules/
+client/dist/
+server/db/*.db
+server/db/*.db-wal
+server/db/*.db-shm
+test/*.db
+test/*.db-wal
+test/*.db-shm
+.env
+nvcf.key
+certs/
+*.log
+dc.txt
