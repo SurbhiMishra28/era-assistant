@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s), KEY={set:'era_settings'};
-console.log('[Era] app.js v4.0.0 loaded — if you see this twice or an older version, clear the browser cache (Ctrl+F5).');
+console.log('[Era] app.js v4.5.0 loaded — if you see this twice or an older version, clear the browser cache (Ctrl+F5).');
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 // ---- rms session: identity comes from the server (JWT cookie), never from this page (spec §AUTH)
@@ -8,9 +8,9 @@ let ME=null;
 const loadMe=async()=>{try{const{status,data}=await api('/api/assistant/me');if(status===200){ME=data.user;showWho();return true}return false}catch{return false}};
 const demoLogin=async who=>{try{const{status,data}=await api('/api/assistant/demo-login',{method:'POST',body:JSON.stringify({who})});if(status===200){ME=data.user;showWho();return true}}catch{}
  return false};
-// two views only: auth → workspace (Era herself is the interface; no intro card, no chat panel)
+// two views only: auth → workspace (Era herself is the interface; no intro card — chat history lives in the v4.5 drawer)
 const show=v=>{$('#auth').classList.toggle('hidden',v!=='auth');document.querySelector('main').classList.toggle('hidden',v!=='app')};
-const showApp=async()=>{show('app');setState('idle','Ready');startLife();
+const showApp=async()=>{show('app');setState('idle','Ready');startLife();refreshChats();
  // pop-up greeting: personalized from the authenticated identity, once per login session.
  // sessionStorage survives reloads (refresh = quiet restore) and is cleared on sign-out.
  let greeted=false;try{greeted=sessionStorage.getItem('era_greeted')==='1'}catch{}
@@ -80,8 +80,8 @@ const pickVoice=text=>{const lang=(isDevanagari(text)||isHinglish(text))?'hi':((
 let speakSeq=0; // generation token: stop/new reply/logout invalidates playback mid-flight
 let ttsAudio=null; // current Audio element for NVCF playback
 const stopSpeak=()=>{speakSeq++;if(ttsAudio){ttsAudio.pause();URL.revokeObjectURL(ttsAudio.src);ttsAudio=null}mouthStop()};
-async function speak(text){$('#live').textContent=text; // a11y: replies remain readable when TTS is off/quiet
- if(!S.voice){setState('idle','Ready');return}
+async function speak(text,restState){$('#live').textContent=text; // a11y: replies remain readable when TTS is off/quiet
+ if(!S.voice){setState(restState||'idle','Ready');return}
  const gen=++speakSeq;
  setState('speaking','Speaking…');
  // NVIDIA NVCF TTS via the server proxy — the API key never reaches the browser (v4.0: Sofia only, auto EN/हिन्दी/Hinglish)
@@ -93,22 +93,23 @@ async function speak(text){$('#live').textContent=text; // a11y: replies remain 
   if(gen!==speakSeq)return;
   if(ttsAudio){ttsAudio.pause();URL.revokeObjectURL(ttsAudio.src)}
   ttsAudio=new Audio(URL.createObjectURL(blob));
-  ttsAudio.onended=ttsAudio.onerror=()=>{if(gen===speakSeq){stopSpeak();setState('idle','Ready')}};
+  ttsAudio.onended=ttsAudio.onerror=()=>{if(gen===speakSeq){stopSpeak();setState(restState||'idle','Ready')}};
   await ttsAudio.play();return}
  catch(e){console.warn('NVIDIA voice unavailable',e);
   if(gen===speakSeq)setState('idle','Voice service unavailable — please try again shortly')}}
 // ---- brain: answers come ONLY from the doctor-scoped server tools (/api/assistant/chat);
 // the character speaks the reply — voice-only, no chat panel.
 async function ask(text){text=String(text||'').trim();if(!text)return;
+ if(!isViewingToday())chatLog.innerHTML=''; // sending always continues TODAY's conversation
+ activeConv='today';bubble('user',text);
  setState('idle','Thinking…');let r=null;
  try{const{status,data}=await api('/api/assistant/chat',{method:'POST',body:JSON.stringify({message:text})});
   if(status===200&&data.ok)r=data.reply;
   else if(status===401){r='Your session expired — please sign in again.';doLogout();return}
-  else if(status===403||data.error==='FORBIDDEN'||data.error==='NOT_YOUR_PATIENT')r=data.message||'I can only access information available to your RMS account.';
-  else if(status===409)r=data.message||'That time slot is already booked.';
+  else if(data.denied||status===403||data.error==='FORBIDDEN'||data.error==='NOT_YOUR_PATIENT'){r=data.message||data.reply||'I can only access information available to your RMS account.';bubble('era',r);speak(r,'denied');return}
   else if(status>=400)r=data.message||'Something went wrong. Please try again.';
  }catch(e){console.warn('chat API unreachable',e);r='I cannot reach the clinic server right now. Please check the connection and try again.'}
- speak(r||'I did not catch that. Could you ask again?')}
+ const reply=r||'I did not catch that. Could you ask again?';bubble('era',reply);speak(reply);loadConvos()}
 // ---- voice in (mic) + slim text fallback
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec;
 $('#mic').onclick=()=>{if(!SR)return speak('Voice input needs Chrome or Edge. You can type instead.');
@@ -118,11 +119,49 @@ $('#mic').onclick=()=>{if(!SR)return speak('Voice input needs Chrome or Edge. Yo
  rec.onend=()=>{if(face.dataset.state==='listening')setState('idle','Ready')};rec.start()};
 $('#stop').onclick=()=>{stopSpeak();rec&&rec.abort();setState('idle','Ready')};
 $('#send').onclick=()=>{ask($('#msg').value);$('#msg').value=''};$('#msg').onkeydown=e=>e.key==='Enter'&&$('#send').click();
+// ---- chat panel (v4.5): every exchange is saved per day on the server; this drawer shows the
+// doctor↔Era history with past days as tag chips. A read-only mirror — the stage stays voice-first.
+const panel=$('#chatPanel'),chatLog=$('#chatLog'),convTags=$('#convTags');
+let convList=[],activeConv='today';
+const todayStr=()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')};
+const isViewingToday=()=>activeConv==='today'||((convList.find(c=>String(c.id)===activeConv)||{}).day===todayStr());
+const bubble=(role,text)=>{const d=document.createElement('div');d.className='bub '+role;
+ const p=document.createElement('p');p.textContent=String(text??'');d.appendChild(p);chatLog.appendChild(d);chatLog.scrollTop=chatLog.scrollHeight};
+const emptyLog=()=>{chatLog.innerHTML='';const d=document.createElement('div');d.className='bub sys';
+ d.textContent='No messages yet — talk to Era and the conversation will appear here.';chatLog.appendChild(d)};
+const dayLabel=d=>{if(d===todayStr())return'Today';
+ const y=new Date();y.setDate(y.getDate()-1);
+ const ys=y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
+ if(d===ys)return'Yesterday';
+ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d||'');return m?new Date(+m[1],+m[2]-1,+m[3]).toLocaleDateString(undefined,{day:'numeric',month:'short'}):d};
+async function loadConvos(){try{const{status,data}=await api('/api/assistant/conversations');
+ if(status===200&&Array.isArray(data.data)){convList=data.data;renderTags()}}catch(e){}}
+function renderTags(){convTags.innerHTML='';
+ const list=convList.slice();
+ if(!list.some(c=>c.day===todayStr()))list.unshift({id:0,day:todayStr(),messages:0});
+ list.forEach(c=>{const b=document.createElement('button');b.type='button';
+  b.className='chip'+((activeConv===String(c.id)||(activeConv==='today'&&c.day===todayStr()))?' on':'');
+  b.textContent=dayLabel(c.day)+(c.messages?' · '+c.messages:'');
+  b.onclick=()=>{if(c.id)loadConv(c.id);else{activeConv='today';renderTags();emptyLog()}};
+  convTags.appendChild(b)})}
+async function loadConv(id){try{const{status,data}=await api('/api/assistant/conversations/'+id);
+ if(status!==200)return;activeConv=String(id);renderTags();chatLog.innerHTML='';
+ (data.data.messages||[]).forEach(m=>bubble(m.role,m.text));if(!chatLog.children.length)emptyLog()}catch(e){}}
+async function refreshChats(){await loadConvos();
+ if(!isViewingToday())return; // never clobber a past day the user is reading
+ chatLog.innerHTML='';
+ const today=convList.find(c=>c.day===todayStr());
+ if(today){try{const{status,data}=await api('/api/assistant/conversations/'+today.id);
+  if(status===200)(data.data.messages||[]).forEach(m=>bubble(m.role,m.text))}catch(e){}}
+ if(!chatLog.children.length)emptyLog()}
+$('#openChat').onclick=()=>{panel.classList.remove('hidden');refreshChats()};
+$('#closeChat').onclick=()=>panel.classList.add('hidden');
 // ---- logout: server clears the HttpOnly cookie; client resets identity + greeting flag
 async function doLogout(){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}
  try{sessionStorage.removeItem('era_greeted')}catch{}
  stopSpeak();
- ME=null;stopLife();showWho();show('auth')}
+ ME=null;stopLife();showWho();show('auth');
+ chatLog.innerHTML='';convTags.innerHTML='';convList=[];activeConv='today';panel.classList.add('hidden')}
 $('#logout').onclick=doLogout;
 $('#demoBtn').onclick=async()=>{const m=$('#authMsg');m.className='authmsg';m.textContent='Signing in with demo account…';
  if(await loadMe()||await demoLogin(($('#persona')||{}).value||'doctorA'))showApp();

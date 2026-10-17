@@ -1,6 +1,6 @@
 {
   "name": "era-assistant",
-  "version": "3.1.0",
+  "version": "4.5.0",
   "private": true,
   "type": "commonjs",
   "description": "Era — AI face & voice clinic assistant. Static app + zero-dependency Node API server with SQLite.",

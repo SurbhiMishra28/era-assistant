@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: era-assistant
+    runtime: node
+    plan: free
+    region: singapore        # nearest to the clinic; change to oregon/frankfurt as needed
+    buildCommand: npm test   # the security suite gates every deploy
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      # Era uses node:sqlite, which needs Node >= 22.5. Pin the runtime explicitly
+      # so a Render default image can never boot the app on an old Node.
+      - key: NODE_VERSION
+        value: "22"
+      # Secret values are NOT in this file. Set them in the Render dashboard
+      # (or as encrypted env vars minimum for a real deployment):
+      #   JWT_SECRET      long random string
+      #   NVIDIA_API_KEY  NVIDIA NVCF key (or ship nvcf.key, which is gitignored)
+      #   DEMO_LOGIN=0    turns off the one-click demo users
+      #   CORS_ORIGIN     your dashboard's exact origin
+      #   ERA_DB=/var/data/era.db persistent disk mount point (optional)

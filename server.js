@@ -39,5 +39,6 @@ module.exports={__test:{
  verifyJWT:auth.verifyJWT,mintToken:auth.mintToken,hashPw:auth.hashPw,verifyPw:auth.verifyPw,
  requireAuth:auth.requireAuth,requireRole:auth.requireRole,requireDoctor:auth.requireDoctor,
  tools:tools.tools,runTool:tools.runTool,scopeDoctor:tools.scopeDoctor,
- routeIntent:brain.routeIntent,db:database.db,EraDB:database.EraDB,
+ routeIntent:brain.routeIntent,pickDateTime:brain.pickDateTime,
+ db:database.db,EraDB:database.EraDB,
  audit:router.audit,sanitize:router.sanitize,toolReply:router.toolReply}};

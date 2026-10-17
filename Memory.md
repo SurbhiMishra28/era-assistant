@@ -1,169 +1,132 @@
-# Memory.md — Era project memory
+# Memory.md — Things Worth Knowing About Era
 
-**Updated:** 2026-10-01 · Read this before touching `app.js` or `db/db.js`.
+**Version:** 4.4 · **Last updated:** 2026-10-05
+
+Read this before changing `app.js`, anything in `lib/`, or `db/db.js`.
 
 ## 1. What this project is
-Single-folder, static, zero-dependency **character** assistant for a clinic ("Era"): inline SVG
-clinician (v3.5) with lip sync, Web Speech in/out, and dashboard answers from the doctor-scoped
-server tools. The browser holds no local brain — every answer comes from `/api/assistant/chat`.
 
-## 2. Key decisions & why
-| Decision | Why |
+One folder, no packages to install: a web page and a small Node.js server with a local database. A
+doctor signs in, a 3D character greets them, and they ask questions by voice or by typing. Answers
+come from that doctor's own clinic data and from a list of 15 general health answers, then get spoken
+in NVIDIA Sofia's voice.
+
+The same folder is pushed to GitHub (`main`) and deployed on Render
+(https://era-assistant.onrender.com). Render's free tier sleeps after ~15 idle minutes and wipes its
+disk on redeploy — the database fallback chain re-seeds it on the next start.
+
+The browser holds no answers of its own. Everything goes to `/api/assistant/chat`, which decides what
+to do and runs the query with the right permissions.
+
+## 2. Why things are the way they are
+
+| Decision | Reason |
 |---|---|
-| JS-file "database" (`window.EraDB`) instead of real DB | Project is static/dependency-free by rule; JSON-in-JS keeps zero-install, and the table shape maps 1:1 to SQL for the later swap (Architecture.md §5). |
-| Keyword scoring, not regex-per-topic | 15 topics × phrasings would explode regexes; scoring gives graceful best-match and a clean `null` fall-through. |
-| Health lookup **after** schedule intents | "how many appointments today" contains no health keywords, but a single over-eager keyword (e.g. *weight* in diet row) must never shadow schedule answers; ordering makes intent overlap deterministic. |
-| Word-boundary/prefix token match | Earlier `t.includes(k)` matched "w**eat**her" → diet row. Tokens (`w===n` or `w.startsWith(n)` when `n≥4`) killed that class of bug; prefixes catch *vaccine/vaccines*. |
-| Schedule stored only in localStorage | User edits must survive reload; `db.js` seeds it on first run (`load(KEY.sch,null) \|\| EraDB.seedSchedule.slice()`). |
-| Greeting mentions health skill | Otherwise users never discover the v1.1 feature. |
-| `speak()` strips `•` and `—` | Screen-reader-friendly bullets sound broken through TTS. |
+| No npm packages | Project rule. Node's built-in tools are enough. |
+| `package.json` sets `"type": "commonjs"` | A folder higher up has `"type": "module"`, which broke the server. The project-local setting wins. Don't remove it. |
+| Keyword scoring rather than one rule per topic | 15 topics times many phrasings would explode into dozens of rules. Scoring gives a best match that degrades gracefully, and a clean "no match" when nothing fits. |
+| Health answers looked up after clinic questions | "How many appointments today" has no health words in it, but one over-eager keyword could still steal it. Checking clinic questions first makes the order predictable. |
+| Words match whole words, or start a word of 4+ letters | An earlier version matched anywhere in the text, so "w**eat**her" hit the diet answer. This fixed that whole class of bug. Prefixes still catch "vaccine" from "vaccines". |
+| Only settings are stored in the browser | The chat log and the schedule editor were removed along with the chat panel. |
+| Greeting mentions what Era can do | Otherwise nobody discovers the health answers. |
+| Replies are spoken, not printed | The user wanted the character, not a chat screen. A hidden region keeps it accessible when the sound is off. |
+| Greeting uses session storage, not local storage | The user asked for "once per login session". Session storage dies with the tab, so a refresh is quiet but a new sign-in greets again. |
+| `.env` beats shell values | This machine exports junk like `PORT=0`, which broke the first launch. The file is the only source of truth. |
+| Demo sign-in is a switch, not a side effect | It used to turn itself off whenever a real secret was set. That silently killed the demo buttons on the sign-in card — the screen was offering something that no longer worked. Now it's an explicit choice, on by default. |
+| `SOFIA_VOICES` lives in one place | It was written down twice, once for the voice list and once for the refusal check. They drifted. One owner, both readers. |
+| The retry and caching code is its own file | The router used to own it, which is why a bug hid in there after the split. It now returns both the audio and the list of things that went wrong. |
+| Sample appointments move to today and tomorrow on every start | They were set once when the database was first created and then froze. "What do I have tomorrow" answered empty forever after. |
+| HTTPS uses the same request handler, not the same server object | Passing a server instance to `https.createServer` throws at startup. That bit us live. |
+| The watchdog script must use Windows line endings | Batch files misfire on line feeds. And it must be launched by full path. |
+| SQLite adds missing columns but never removes any | Someone's real data must survive an upgrade. |
+| Submission guides and PDFs live in `docs/` | Sheets and reviews need long-form and simple-language versions; they are snapshots, so they go stale when the core docs change. |
 
-### v3.8 — NVIDIA NVCF voice (what changed & why)
-| Decision | Why |
-|---|---|
-| **v3.9.1: BOTH transports flake independently — try HTTP then gRPC** | Same function-id, two serving paths. Verified gRPC healthy during an HTTP-down window (and later the reverse). Server: 3× HTTP → 2× `python tts-grpc.py` (riva gRPC client, `pip install --user nvidia-riva-client`; tool-only dep, app stays zero-npm). gRPC `synthesize()` returns `resp.audio` = raw s16le PCM → bridge builds the 44-byte WAV header itself. gRPC has NO list_voices method (HTTP only). |
-|---|---|
-| **Upstream is FLAKY — design for it** | NVCF's Triton ensemble intermittently returns `400 "Mapping failed. Check that all pronunciations…"` for MINUTES at a time, for ANY text (same text was 200 earlier — it's time-based, not input-based). Defense: server retries 4x (0.8/2/4.5s backoff) + validates `RIFF` header + LRU WAV cache (20) + browser fallback in `speak()`. Do not trust a single success/failure as proof. |
-| Server proxy `/api/tts`, not browser→NVIDIA direct | The API key must never reach the browser; also NVCF would CORS-block a direct call. Key in gitignored `nvcf.key` or `NVIDIA_API_KEY` env — never hardcode, never log. |
-| NVCF synth is **multipart/form-data**, field is **`language`** | First JSON attempt returned `400 Bad Request, empty text input`. Schema lives in `{base}/openapi.json` (Riva HTTP API 1.9.0). Response is a raw RIFF/WAVE — play directly in `<audio>`. |
-| Voice name embeds the language | `Magpie-Multilingual.EN-US.Sofia` → derive `language=EN-US` from the name (regex on the name). List from `GET /v1/audio/list_voices`. |
-| v3.9: browser speechSynthesis REMOVED (user request) | Only Magpie-Multilingual voices now — `speak()` is a single NVCF path; upstream failure → status message, no fallback voices. `stopSpeak()` consolidates the old stop/cancel paths. Mic input is unaffected (SpeechRecognition stays). |
-| `speakSeq` token still guards everything | stop/new reply/logout must call `stopSpeak()` — playback and (any future) chains share the token. |
-|---|---|
-| Server proxy `/api/tts`, not browser→NVIDIA direct | The API key must never reach the browser; also NVCF would CORS-block a direct call. Key in gitignored `nvcf.key` or `NVIDIA_API_KEY` env — never hardcode, never log. |
-| NVCF synth is **multipart/form-data**, field is **`language`** | First JSON attempt returned `400 Bad Request, empty text input`. Schema lives in `{base}/openapi.json` (Riva HTTP API 1.9.0). Response is a raw RIFF/WAVE — play directly in `<audio>`. |
-| Voice name embeds the language | `Magpie-Multilingual.EN-US.Sofia` → derive `language=en-US` from the name (regex on the name). List from `GET /v1/audio/list_voices`. |
-| v3.9: browser speechSynthesis REMOVED (user request) | Only Magpie-Multilingual voices now — `speak()` is a single NVCF path; upstream failure → status message, no fallback voices. `stopSpeak()` consolidates the old stop/cancel paths. Mic input is unaffected (SpeechRecognition stays). |
-| `speakSeq` token still guards everything | stop/new reply/logout must call `stopSpeak()` — playback and (any future) chains share the token. |
+## 3. Gotchas that will cost you time
 
-### v4.0 — Sofia-only voice + auto-language (what changed & why)
-| Decision | Why |
-|---|---|
-| ONE voice: Sofia EN-US (default) + HI-IN only; server filters `/api/tts/voices`, app hard-filters too | User request ("only 1 voice, ladki ki voice"). Sofia exists in EN-US, HI-IN, AR-AR — Arabic dropped per "only hindi english hinglish". |
-| Auto-language per reply in `pickVoice()`: Devanagari → हिन्दी, romanised Hinglish word-list → हिन्दी, else selected voice | User wants Hindi/English/Hinglish without picking languages manually. Verified live: roman Hindi text synthesizes fine with HI-IN. |
-| `language` field must be proper-case (`en-US`), never voice-name case (`EN-US`) | Uppercase tag → Triton `400 "Mapping failed"` EVERY time (root cause of era-server.log failures). Derive then re-case `xx`+`-`+`YY`. |
-| TTS failure log now records EVERY attempt (`errs[]`), not just the last | gRPC error used to overwrite the HTTP errors, hiding the real cause during debugging. |
-| Stale `S.ttsVoice` (old localStorage, e.g. Mia) never breaks `pickVoice()` | Falls back to `SOFIA.en`; Settings save normalizes it. |
+**Fixed in 4.4 — understand why, so they don't come back:**
 
-### v4.1 — Production posture (what changed & why)
-| Decision | Why |
-|---|---|
-| `.env` file WINS over shell env (`process.env[m[1]]=…` unconditionally) | This box exports junk shell-wide (`PORT=0` broke the first launch). One source of truth per process. |
-| `POST /api/tts` validates `SOFIA_VOICES` (400 BAD_VOICE), same const as the list endpoint | Audit proved Louise (FR) still synthesized → "Sofia only" was cosmetic. Single owner = list & guard can't drift. |
-| HTTPS mirror reuses the shared `handler(req,res)` — NOT the `http.Server` instance | `https.createServer(opts, serverInstance)` throws `listener must be function` at startup (bit us live). |
-| `start-era.cmd` MUST be CRLF; launch with an ABSOLUTE path | LF batch files: labels/goto misfire; this sandbox sets `NoDefaultCurrentDirectoryInExePath` so bare `cmd /c start-era.cmd` is "not recognized". |
-| Demo appointment rows (reason `APPOINTMENT …`) re-dated to today/tomorrow at every start | Seed dates froze at first DB creation → "appointments tomorrow" answered empty forever after day one. |
-| `schtasks` logon-task registration left to the user (elevation denied in-session) | Watchdog still runs manually; README documents the one-line register command. |
+- **`pickDateTime()` in `lib/brain.js` is what makes voice booking work.** It pulls the date, time and
+  patient name out of a sentence. Look for `am`/`pm` *before* trying the 24-hour pattern, or "3:30 pm"
+  is read as 03:30. Match the number and its meridiem together, or "3pm" with no space is missed.
+- **Reschedule is matched before booking.** "move appointment 3 to tomorrow" contains words the
+  booking rule likes, so the reschedule pattern must come first or it books instead of moving.
+- **`slotClash()` is the only way to check a slot is free.** It compares intervals. The old
+  `start_time=?` test let a 09:00–10:30 appointment be overlapped by a 09:30 one. Both `lib/tools.js`
+  and the REST endpoint must use it.
+- **`localDay()` / `localTime()` are the only date source.** `toISOString()` and SQL's `date('now')`
+  are UTC; this box is IST and rolls over at 05:30, so the early morning read as "yesterday".
+- **`httpErr` messages are meant to be spoken aloud.** Say them. The chat handler used to answer "I
+  can only access information available to your RMS account" for every failure, so a taken slot sounded
+  like a permissions problem.
+- **The login throttle needs two counters.** Per `(IP + email)` stops one account being guessed; per IP
+  stops spraying. Only a success clears its own account's counter — clearing the per-IP one on success
+  lets any colleague behind the same NAT re-arm an attacker's budget.
+- **`token.js` persona names must match `lib/database.js`'s seed.** They drifted once (Dr. Sharma /
+  Dr. Verma) and the CLI exited 1 for every persona.
+- **The test runner awaits async tests now.** Before that, a failing async test still printed PASS. If
+  you add an HTTP test, return the promise — `t()` tracks it.
 
-### v4.2 — Modular split (what changed & why)
-| Decision | Why |
-|---|---|
-| server.js (531 lines) → 7 modules under `lib/`: env → auth → database → tools → brain → tts → router; server.js = thin entry (config init + listeners + test exports) | Two consecutive design audits capped at 4/10 while every concern lived in one file. Now each concern is readable alone; dependencies flow one way (router → everything; env → everything). |
-| `SOFIA_VOICES` has ONE owner (`lib/env.js`); both the voice list and the synthesize 400-guard import it | Policy was stated twice (drift risk). |
-| TTS retry/cache/key pipeline extracted to `lib/tts.js` returning `{wav,errs}` | Router now owns only HTTP; fixed the latent `lastErr`-after-`errs` bug in the gRPC catch during the move. |
-| `__test` export surface preserved exactly (test/security.test.js, token.js untouched) | Behavior-preserving refactor: same endpoints, same .env/nvcf.key/certs handling, same :8000/:8443. Verified: 18/18 suite, EN/HI/Hinglish 200 RIFF, Louise 400, watchdog restart to new code. |
+**Still true, and easy to trip over:**
 
-### v4.3 — Demo login is a switch, not a side effect (what changed & why)
-| Decision | Why |
-|---|---|
-| `DEMO_LOGIN` flag in `lib/env.js` (default ON, `DEMO_LOGIN=0` to disable); router checks the flag, NOT the JWT_SECRET value | v4.1 tied demo-login to "no real secret" — going live silently killed the start screen's advertised demo users (dead end the user hit). Now demo access is an explicit product decision, independent of auth strength. |
-| Frontend still advertises the demo users; endpoint is ON by default | The login screen and the endpoint must agree — a screen offering dead buttons is worse than no feature. |
-| One-click demo sign-in re-verified in-browser after the un-gate (greeting + TTS + chat) | Contract: "click a demo user → signed in as that doctor". |
+- **Patient details reach NVIDIA's cloud for speech.** Names, dates of birth, medications. `sanitize()`
+  strips internal IDs only. This is the biggest open risk.
+- **A token stays valid for 8 hours after the cookie is cleared.** Logout cannot revoke it.
+- **Sign-in also signs people up.** An unknown email plus any 4-character password becomes a new
+  doctor account. Don't restore a separate register step — that was a deliberate choice — but do know
+  this endpoint will create accounts for anyone.
+- **The sign-in throttle is in-memory.** It resets on restart and does nothing across two machines.
+- **There is no confirmation before a write,** so a misheard number can cancel a real appointment.
+- **A booking sentence that is missing the time fails outright** — no follow-up turn asks for it.
+- **Duplicate-column errors say "duplicate column name",** not "already exists". The migration code
+  has to catch both spellings or the second start crashes. This caused a restart loop once.
+- **Staff who aren't doctors get a friendly "you can't see that"** with a 200 status, not a 403. That
+  was deliberate — a raw 403 in the console confused the user. Note they still get the shared clinic
+  schedule answered normally, which is not a denial.
+- **Prefix matching needs 4 letters or more,** otherwise "wa" matches both "walk" and "water".
+- **Keywords are stored lowercase.** Keep them that way.
+- **Don't put clinic logic back into `app.js`.** Answers come from the server only.
+- **The refused state is now used.** `app.js` passes a resting state into `speak()` and asks for
+  `'denied'` when the server refuses, so the red rings in `style.css` finally show.
+- **`index.html` no longer loads `db/db.js`** — it was unhooked, and `app.js` bumped to `?v=4.3.0`,
+  in a change that was not mine, partway through the 4.4 session. So `window.EraDB` no longer exists
+  in the browser, and `ask()` / `findAnswerFallback()` in `db/db.js` are dead code. `/api/qa` still
+  answers as a raw endpoint but nothing in `app.js` calls it. Nothing breaks either way: `app.js`
+  never referenced `EraDB`. An earlier note here claimed this removal had happened *and* that
+  `/api/qa` was gone — both were wrong at the time.
+- **There is no character if the image is missing.** The drawing fallback was removed in 3.7.2.
+- **The lip-sync code does nothing.** The character is a picture now. The mouth-shape, blink and
+  eyebrow helpers find no elements and quietly do nothing.
+- **Any new file the browser needs must be added to the static list** in `lib/router.js`, or it will
+  404.
+- **Deleting browser storage resets the settings.** That's intended.
+- **The microphone doesn't work from a file on disk.** Chrome blocks it. Always go through the server.
+- **`era-server.log` is output, not data.** Safe to delete.
+- **All 15 health answers carry a "see a doctor" pointer now,** and a test fails if one is added
+  without it. The pointer is hand-written into each answer; the server does not add one.
+- **Testing a cloud deploy takes patience.** After ~15 idle minutes the first request waits
+  30–50 s for the wake-up, and the database may be freshly re-seeded — don't mistake that for data
+  loss on your machine. `render.yaml` now holds the build and start commands.
 
-### v3.5 — Character UI (what changed & why)
-| Decision | Why |
-|---|---|
-| Greeting guarded by `sessionStorage` (not localStorage) | User chose "once per login session": sessionStorage dies with the tab session, so a fresh login re-greets but a refresh doesn't. Cleared explicitly on logout. |
-| Viseme lip sync from TTS `onboundary` word events | Only zero-dep way to approximate phoneme timing; vowel content of each word picks the mouth shape (round/ooh for u/o words, wide/open otherwise). rAF jaw loop covers engines without boundary events (e.g. some Safari voices). |
-| No chat panel — voice-only replies + hidden `aria-live` | User explicitly wanted the character, not a chat UI. `#live` keeps replies accessible when TTS is off and satisfies a11y review. |
-| SVG replaces `assets/era.png` in the workspace | Lip sync needs an animatable mouth; the PNG can't. The PNG stays on the auth card (logo). |
-| v3.6: mouth is a clipPath rig (`#mouthClipPath` in defs) | Pixar-look needs teeth/tongue that stay inside the mouth while the viseme shape morphs — clipping gives that for free. `app.js` swaps the clip path's `d` via the `MOUTH` set; never draw over `#mouthGrp` elsewhere. |
-| v3.7: photo mode = `<img>` probe, not a config flag | `assets/era3d.png` loads → `#photoWrap` replaces the SVG; error → SVG stays. No build step, no setting to remember — the user just drops the file (chat-pasted images can't be written to disk by the agent). |
-| v3.7: sentence-chained TTS with `speakSeq` token | Per-sentence utterances give natural pacing + allow tiny rate/pitch jitter; the token makes stop/new-reply/logout abort the chain (Web Speech `cancel()` fires `onend`, which would otherwise keep speaking). |
-| Server-side reply() kept, local brain removed | All answers must stay doctor-scoped server-side; removes the localStorage schedule mutation path entirely. |
+## 4. This machine
 
-## 2b. v2.0 — SQLite + API (what changed & why)
-| Decision | Why |
-|---|---|
-| `node:sqlite` (`DatabaseSync`), zero deps | A real SQL file DB with no driver install; keeps the no-npm rule. Node ≥ 22.5; one ExperimentalWarning at start is expected. |
-| `server.js` owns DB + static files | One process serves app + API; replaced the Python http.server (kill it first — port 8000 clash). |
-| API-first with offline fallback (`ask()`) | Browser calls `/api/qa`; on fetch failure uses bundled rows — the app never dies when the server does. |
-| Dual-export `db.js` (factory, UMD-style) | Same file feeds the browser (`window.EraDB`) and seeds/queries SQLite in Node (`module.exports`). |
-| `package.json` pins `"type":"commonjs"` | The user's HOME folder has a package.json with `"type":"module"`; ancestor resolution broke `server.js` (`require is not defined`). The project-local pin wins — do not delete it. |
-| `keywords`: JSON string in SQL, array in seed | SQLite TEXT column; `scoreRows` parses defensively (accepts both). Early bug: `JSON.parse` on the seed array crashed — caught by the Node smoke test. |
+- Windows. The server runs as `node server.js` on port 8000, output going to `era-server.log`. Kill
+  the old listener first or the port clashes.
+- Node 24, Python 3.13. Node 22.5 or newer is required, for the built-in database.
+- `db/era.db` is real data — it regenerates if deleted, after a backup. Tests never touch it; they use
+  `db/era.test.db` through the `ERA_DB` setting.
+- **Editing server code needs a restart.** The running process keeps the old code, so testing against
+  it fails even when your change was right. That cost a debug loop once.
+- Checking work: `node --check` on every file, then `npm test`, then hit the running server.
+- The health answer check: fever, diet and blood pressure should match; weather and clinic questions
+  should not.
 
-## 2c. v3.0 — RMS-ready security layer (what changed & why)
-| Decision | Why |
-|---|---|
-| `verifyJWT` accepts Bearer **or** HttpOnly cookie | Dashboard pages can't always set headers; cookie keeps the token out of JS. |
-| `scopeDoctor()` centralizes scoping | Doctors are pinned to their own doctorId; only admin may pass an explicit `doctor_id` — one choke point, no per-tool drift. |
-| `routeIntent` separate from tools | The "AI" is replaceable (swap for an LLM) while auth stays in the tool layer — prompt is never a security boundary. |
-| `sanitize` strips `doctor_id`/`patient_id` in responses | Data minimization; the client never learns internal keys. |
-| Scratch DB via `ERA_DB` env for tests | Write tools mutate state; without isolation, run #2 fails on already-cancelled rows. `server.js` resolves it at require-time — set it **before** requiring. |
-| Demo-login disabled by `JWT_SECRET` env | Demo convenience can't leak into production; a real RMS brings its own login. |
+## 5. Picking up where you left off
 
-### v3.0 bug post-mortems (both caught by verification, not review)
-- **JWT verify always failed:** `Buffer.from(s).toString()` decodes UTF-8, not base64url — payload
-  parsed as garbage while the *signature* was valid. Fix: `Buffer.from(s,'base64url').toString('utf8')`.
-- **`tool_result` collapsed to `""`:** JSON replacer returned the *key* (`k`) instead of *value*
-  (`v`) when dropping internal ids, stringifying the whole object. Fix: replacer `(k,v)=>…`.
-
-## 2d. v3.1 — Full RMS spec pass (key notes)
-- Workspace inspection confirmed **no separate RMS project exists** — Era IS the existing project;
-  the spec was implemented in-place (no rebuild). DB backed up before reseeding.
-- Passwords: scrypt (`crypto.scryptSync`, static salt `era-salt-v1`) + `timingSafeEqual`. Demo-grade —
-  swap for bcrypt/argon2 with per-user salts before production.
-- Fresh seed required: pre-v3.1 DBs lack `password_hash`; delete `db/era.db` (after backup) to reseed.
-- REST + AI tools accept both key styles (`date`/`appointment_date`, `start_time`/`appointment_time`)
-  so the spec's naming and Era's tool naming coexist.
-- Test 3 over HTTP returns **404** (not 403) by design: ownership failures are indistinguishable
-  from "doesn't exist" to avoid resource enumeration.
-
-## 3. Gotchas / what breaks it
-- **SQLite duplicate-column error text is "duplicate column name: …", not "already exists"** — the
-  idempotent-migration catch must match both or boot #2 crashes (cost a restart loop in v3.1).
-- **Login is sign-in + sign-up combined** (user request): unknown email+password auto-creates an
-  account (201); wrong password on an existing account still 401s with a hint. Don't "restore" a
-  hard register flow.
-- **Chat 403 → friendly 200 denial for non-doctor roles:** admin/reception asking for doctor data
-  get `ok:true, denied:true` + guidance text; the tool layer still enforces security. Don't turn
-  this back into a raw 403 — the browser console errors confused the user.
-- **Prefix matching ≥ 4 chars only** — shorter prefixes would make `wa` match *walk* and *water*.
-  Keep single-word keywords ≥ 4 chars (Rules.md §3).
-- `findAnswer` normalizes away punctuation; keywords are matched lowercase — keep them lowercase.
-- v3.5 removed the client `reply()` brain, chat log, and schedule editor — don't reintroduce local
-  intent handling in `app.js`; answers come only from `/api/assistant/chat` (Rules 5).
-- v3.6 character geometry: mouth center ≈ (150,166); viseme `MOUTH` paths in `app.js` are tuned to
-  it. If you move the mouth in `index.html`, re-tune `MOUTH` + the teeth/tongue rects inside
-  `#mouthGrp` together — they move as a set. Brows use a generic Q-control-point raise (works for
-  any brow path).
-- v3.7 photo mode: `assets/era3d.png` is the character image (v3.7.1: copy of `era.png`, the 3D
-  render with transparent background). v3.7.2: **SVG model deleted** — the photo is the only
-  character, visible by default in HTML (no load-event race). Rig helpers in `app.js` no-op safely
-  (element refs empty). Photo framing knobs: `--eraPhotoW/H/X/Y` in `style.css :root`. New static
-  assets must be added to the `STATIC` map in `server.js`.
-- v3.7 voice: `speakSeq` must be bumped in every cancellation path (Stop button, `doLogout`,
-  starting a new reply). Miss one and the sentence chain keeps talking after cancel. Local voices
-  only — cloud TTS would break Rules 3 (privacy/no third-party calls).
-- `reply(q)` now keeps the **raw** input in `input` because `q` is lowercased in place — pass
-  `input` (not `q`) to `findAnswer`. (It's case-safe either way, but that's the contract.)
-- Deleting localStorage = reset to seed; that's a feature (Rules §3), don't "fix" it.
-- Mic on `file://` is blocked in Chrome — always serve via the local server; that's why
-  the README insists on `python -m http.server`.
-- `era-server.log` is server output, not project data; safe to delete/git-ignore.
-
-## 4. Environment notes
-- Windows + bash (Git Bash): use POSIX syntax; `python` = Python 3.13, `node` = v24.
-- Server running on **:8000** is `node server.js` (nohup, log in `era-server.log`); stop old
-  listeners first — port clash. `db/era.db` regenerates if deleted; **test runs never touch it**
-  (they use `db/era.test.db` via `ERA_DB`).
-- **Editing `server.js` requires a server restart** — the running process keeps old code; a curl
-  against a stale server will fail even after a correct fix (cost us a debug loop in v3.0).
-- Verification loop used: `node --check` → Node smoke test of `findAnswer` (set `global.window={}`,
-  `require('./db/db.js')`) → `curl` the served paths for 200.
-
-## 5. If resuming mid-task
-1. Check `Task.md` — shipped vs backlog tells you the frontier.
-2. Retrieval changes ⇒ re-run the 7-case smoke test (fever/diet/BP hit; weather/schedule miss).
-3. Doc updates travel with code changes (Rules.md §7); bump versions + dates.
-4. If a health answer misfires, check keyword collisions **and** intent ordering in `reply()` first.
+1. Read `Task.md`. The open items are at the bottom.
+2. Fix the broken things in section 3 before adding anything new on top of them.
+3. If a health answer misfires, check for two things: two answers sharing a keyword, and the order
+   clinic questions are checked in.
+4. When behaviour changes, change the documents in the same pass. Bump the version and date at the
+   top of each one you touch.
+5. If code and a document disagree, one of them is wrong. Fix whichever it is — don't leave them
+   disagreeing.

@@ -60,8 +60,8 @@ main{display:grid;grid-template-columns:1fr;place-items:center;max-width:1100px;
 button.mini{background:#e3eef3;color:var(--ink);font-size:.75rem;padding:.32rem .75rem;font-weight:700;box-shadow:0 2px 6px #12324014}
 button.mini:hover{background:#d3e5ec;transform:none;box-shadow:0 3px 10px #1232401f}
 .ctrl{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
-.ctrl button:nth-child(2),.ctrl button:nth-child(3){background:#e3eef3;color:var(--ink);box-shadow:0 2px 6px #12324014}
-.ctrl button:nth-child(2):hover,.ctrl button:nth-child(3):hover{background:#d3e5ec}
+.ctrl button:nth-child(2),.ctrl button:nth-child(3),.ctrl button:nth-child(4){background:#e3eef3;color:var(--ink);box-shadow:0 2px 6px #12324014}
+.ctrl button:nth-child(2):hover,.ctrl button:nth-child(3):hover,.ctrl button:nth-child(4):hover{background:#d3e5ec}
 [data-state=listening] #mic{background:linear-gradient(135deg,#d64545,#b73232)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #face .row{width:min(340px,90vw);margin-top:.85rem}
@@ -75,5 +75,22 @@ dialog label{display:block;margin:.7rem 0;font-weight:600}dialog small{display:b
 .chk{display:flex!important;gap:.5rem;align-items:center}.chk input{width:auto;accent-color:var(--teal)}
 @keyframes float{50%{translate:0 -8px}}@keyframes breathe{50%{scale:1.015}}@keyframes glow{50%{transform:scale(1.08);opacity:.6}}
 @keyframes bar{50%{height:24px}}@keyframes talk{50%{scale:1.03}}@keyframes listen{to{transform:scale(1.3);opacity:0}}@keyframes pop{from{opacity:0;transform:translateY(6px)}}
-@media(max-width:800px){#face{padding:1.1rem}.stage{width:250px;height:280px}#eraPhoto{--eraPhotoW:250px;--eraPhotoH:270px}}
+/* ---- chat panel (v4.5): conversation history drawer ---- */
+#chatPanel{position:fixed;top:12px;right:12px;bottom:12px;width:min(380px,94vw);z-index:60;display:flex;flex-direction:column;
+ background:#fffffff2;backdrop-filter:blur(18px);border:1px solid #ffffffb0;border-radius:22px;
+ box-shadow:0 24px 70px #1232402e;animation:pop .2s ease-out;text-align:left}
+.cphead{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1rem .4rem}
+.cphead h3{margin:0;font-size:1.05rem}
+.cpTags{display:flex;gap:.4rem;flex-wrap:wrap;padding:.3rem 1rem .65rem;border-bottom:1px solid #e3eef3}
+.chip{background:#e3eef3;color:var(--ink);font-size:.72rem;font-weight:700;padding:.3rem .75rem;border-radius:999px;box-shadow:none;border:1.5px solid transparent}
+.chip:hover{background:#d3e5ec;transform:none;box-shadow:none}
+.chip.on{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff}
+.cpLog{flex:1;overflow-y:auto;padding:.9rem;display:flex;flex-direction:column;gap:.5rem}
+.bub{max-width:86%;padding:.55rem .8rem;border-radius:16px;font-size:.85rem;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.bub p{margin:0}
+.bub.user{align-self:flex-end;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-bottom-right-radius:6px}
+.bub.era{align-self:flex-start;background:#fff;border:1px solid #d5e5ea;color:var(--ink);border-bottom-left-radius:6px;box-shadow:0 2px 8px #1232400d}
+.bub.sys{align-self:center;background:none;color:var(--mut);font-size:.72rem;padding:.1rem;text-align:center}
+.cpnote{margin:0;padding:.55rem 1rem .75rem;color:var(--mut);font-size:.72rem;border-top:1px solid #e3eef3}
+@media(max-width:800px){#face{padding:1.1rem}.stage{width:250px;height:280px}#eraPhoto{--eraPhotoW:250px;--eraPhotoH:270px}#chatPanel{top:6px;right:6px;bottom:6px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

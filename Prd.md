@@ -1,87 +1,123 @@
-# Prd.md — Era: AI Face & Voice Clinic Assistant
+# Prd.md — What Era Should Do
 
-**Version:** 3.9.0 (NVIDIA-only voice) · **Status:** Live · **Last updated:** 2026-10-01
+**Version:** 4.4 · **Status:** Working demo · **Last updated:** 2026-10-05
 
-## 1. Overview
-Era is a browser-based **character** assistant for a doctor's clinic: a 3D-look (Pixar-style)
-animated clinician who pops up the moment a doctor signs in, greets them by name, and **speaks
-every reply out loud with lip sync**. She accepts spoken questions (mic) or typed input (slim
-fallback line), and answers from **two knowledge sources**:
+## 1. What Era is
 
-1. **The doctor's dashboard data** — appointments, patients, prescriptions, working hours,
-   scoped to the authenticated doctor through the RMS tool layer (`/api/assistant/chat`).
-2. **General health guidance** — a 15-row AI-doctor knowledge base served from **SQLite**
-   (`db/era.db`) through the chat brain (with `/api/qa` as the raw fallback API), covering fever,
-   cold, headaches, blood pressure, diabetes, hydration, sleep, exercise, diet, stress, antibiotics,
-   vaccines, back pain, allergies, and emergency warning signs.
+Era is a voice assistant for a clinic. When a doctor signs in, a 3D character appears, greets them by
+name, and answers their questions out loud. They can speak or type.
 
-Everything runs locally: static SPA + a zero-dependency Node server with SQLite, with **JWT-based,
-role-aware, doctor-isolated assistant endpoints** ready to embed in an existing RMS dashboard
-(no dashboard is built here — Era is the assistant).
+Answers come from two places:
+
+1. **The doctor's own clinic data** — appointments, patients, prescriptions, working hours. Only the
+   data belonging to the signed-in doctor.
+2. **General health guidance** — 15 common questions answered from a local list (fever, cold,
+   headache, blood pressure, diabetes, water, sleep, exercise, diet, stress, antibiotics, vaccines,
+   back pain, allergies, and when to get help urgently).
+
+Everything runs from one folder: a simple web page plus a small Node.js server with a local database.
+No installation, no packages to download.
 
 ## 2. Goals
-- Let clinic staff ask about their day by voice, hands-free.
-- Give instant first-aid / lifestyle guidance from a curated local knowledge base.
-- Stay a **single static folder** — open and run, zero install.
 
-## 2b. RMS integration requirements (v3.0)
-- The assistant always operates under the **authenticated** doctor's identity; the frontend never
-  supplies or modifies `doctor_id`, and AI/tool arguments can never widen scope.
-- Role-aware behavior: `doctor` (own data only), `admin` (explicit cross-doctor scope only),
-  `reception` (health Q&A only).
-- Tools for read **and** write (book/reschedule/cancel) with ownership checks, conflict checks,
-  confirmation-worthy effects, and audit logging.
-- Safe errors and data minimization in every response.
+- Let clinic staff ask about their day by voice, without touching the keyboard.
+- Give clear everyday health guidance from a reviewed local list.
+- Stay a single folder that opens and runs.
+- Run for real: pushed to GitHub and deployed live on Render (https://era-assistant.onrender.com).
 
-## 3. Non-goals (v1)
-- Real patient records, prescriptions, or PHI storage.
-- Diagnosis. Era gives general guidance and always points to a doctor for urgent signs.
-- Multi-day calendar; the model is "today only".
+## 3. Rules about clinic data
 
-## 4. User stories
+- Era always works under the signed-in doctor's identity. The web page never sends a doctor ID, and
+  nothing an AI tool is told can widen what that doctor may see.
+- Roles: **doctor** sees only their own data. **admin** may name one specific doctor to look at.
+  **reception** gets health questions only.
+- Reading and changing data both go through the same checks: ownership, double-booking, and a
+  written record of every action.
+- Replies never include internal IDs, raw database errors, or another doctor's information.
+
+## 4. What this project is not for
+
+- Storing real patient records or real prescriptions. The data here is made up.
+- Diagnosing illness. Era gives general guidance and points to a doctor for anything urgent.
+- A full calendar. Today and tomorrow are what matter.
+
+## 5. User stories
+
 | # | As a doctor I want… | So that… | Status |
 |---|---|---|---|
-| U1 | a friendly face that greets me and speaks | it feels like an assistant, not a form | ✅ |
-| U2 | to ask "what's next" / "how many appointments" by voice | I can plan between patients | ✅ |
-| U3 | to add a meeting by saying "add a meeting called Review at 3 pm" | I don't stop to type | ✅ |
-| U4 | to ask health questions ("what to do for a fever") | I get consistent, safe guidance from the DB | ✅ v1.1 |
-| U5 | my name, voice, speed, schedule saved | Era personalizes without re-setup | ✅ |
+| U1 | a character that greets me and speaks | it feels like an assistant, not a form | ✅ works |
+| U2 | to ask "what's next" or "how many appointments" by voice | I can plan between patients | ✅ works |
+| U3 | to add a meeting by saying "add a meeting called Review at 3 pm" | I don't stop to type | ✅ works |
+| U4 | to ask health questions | I get the same safe answer every time | ✅ works |
+| U5 | my name and voice choice remembered | Era doesn't need setting up again | ✅ works |
+| U6 | to book an appointment by voice in one sentence | I never touch the keyboard | ✅ works — the date, time and patient are read out of the sentence |
+| U7 | to move an appointment to another time by voice | fixing a clash is quick | ✅ works |
+| U8 | to add a meeting and take it off the shared clinic list | the whole day plan is in one place | ✅ add works; remove works through the API |
+| U9 | to be told what actually went wrong | I trust what Era says | ✅ works — a taken slot no longer sounds like a permissions problem |
 
-## 5. Functional requirements
-- **FR1 Start flow (v3.5):** after login the workspace appears with **Era popped up**: a personalized
-  spoken greeting ("Good morning, Dr. Amit! I'm Era, your assistant. How can I assist you today?")
-  — once per login session; refreshes restore quietly.
-- **FR2 Conversation (v3.5):** voice-first — mic input, spoken replies; one slim text input remains
-  as fallback. No chat log; replies are voice-only with an `aria-live` region for accessibility.
-- **FR3 Voice & lip sync:** mic button (Web Speech API, Chrome/Edge); TTS with voice/rate/pitch
-  controls; 3D-look SVG character lip-syncs via viseme mouth shapes (clip rig with teeth + tongue)
-  driven by TTS word-boundary events (+ rAF jaw loop fallback); idle blinks and brow movement keep
-  her alive.
-- **FR3b Photo mode (v3.7):** drop a character render at `assets/era3d.png` and it replaces the SVG
-  rig automatically (same float/breathe/talk-pulse motion); missing file falls back to the SVG.
-- **FR3c Voice (v4.0):** Era speaks ONLY in **NVIDIA Sofia's voice** (user request: one voice,
-  female, no personas) through the server proxy `POST /api/tts` — `Magpie-Multilingual.EN-US.Sofia`
-  (default) and `Magpie-Multilingual.HI-IN.Sofia`. Per-reply auto-language: Devanagari or romanised
-  Hinglish → हिन्दी Sofia; everything else → English Sofia (Settings can pin हिन्दी). Browser
-  speechSynthesis stays removed — if the voice service is unreachable, Era shows a status message
-  instead of speaking. The API key stays server-side (`nvcf.key`, gitignored). Mic input still
-  uses browser SpeechRecognition.
-- **FR4 Schedule brain:** count/list meetings & appointments, next upcoming item (vs current clock), add-by-voice.
-- **FR5 Health brain (v2.0):** free-text questions hit `/api/qa` (SQLite `ai_doctor` table); the browser
-  falls back to bundled rows when the API is unreachable; schedule intents still win on overlap.
-- **FR6 Settings dialog:** name, Era-speaks toggle, greet toggle, voice select, speed, pitch, schedule editor
-  (`HH:MM | type | title` per line), clear chat history.
-- **FR7 Persistence:** settings, schedule, and chat (last 200) in localStorage; knowledge base in SQLite
-  (`db/era.db`), seeded on first server start from `db/db.js`.
+## 6. What the app must do
 
-## 6. Acceptance criteria
-- Asking "i have a fever" returns the fever guidance from the database, spoken aloud.
-- Asking "what is the weather" does **not** falsely match any health entry (word-boundary matching).
-- "how many appointments today" returns the count and list — never a health answer.
-- Deleting `db/era.db` (or localStorage) restores seeds; `node server.js` recreates both.
-- App works offline except fonts (graceful fallback).
+- **FR1 Opening:** after signing in the workspace appears and Era greets them by name, once per login.
+  Refreshing the page does not greet again.
+- **FR2 Talking:** voice first — microphone in, spoken replies out. One typing box stays as a backup.
+  No chat log. Replies also go into a screen-reader region so they are available when sound is off.
+- **FR3 Voice:** Era speaks only in NVIDIA Sofia's voice, through the server, which keeps the API key
+  private. English, हिन्दी and Hinglish are chosen for each reply automatically. If the voice service
+  is down, Era shows a message instead of speaking. The browser's own speech voices are not used.
+- **FR4 Day questions:** count and list appointments and meetings, say what is next, answer from
+  the shared clinic schedule for staff who are not doctors, and add a meeting by voice.
+- **FR5 Health questions:** match the question against the local list of 15 answers. All 15 carry a
+  "see a doctor" pointer for anything urgent.
+- **FR6 Settings:** your name, whether Era speaks, whether she greets you, and which voice to use.
+- **FR7 Saving:** settings are remembered in the browser. Health answers live in the database.
+- **FR8 Speaking a booking correctly:** "book an appointment tomorrow at 4pm for Ravi" books it without
+  asking again. The date, time and patient are read out of the sentence. Times like "3pm", "3:30 pm",
+  "16:45", "half past 2" and "tomorrow morning" are all understood.
+- **FR9 Never double-book:** a booking that overlaps an existing appointment is refused, whatever the
+  length of either. The free-slot list hides times inside a long appointment.
+- **FR10 Stop password guessing:** repeated wrong passwords for one account are counted, and past the
+  limit the server stops checking and asks the person to wait.
+- **FR8 Demo login:** one-click sign-in for five sample users (three doctors, Admin, Front Desk),
+  controlled by the `DEMO_LOGIN` switch so it can be turned off before real use.
+- **FR9 Changing data:** appointments can be booked, moved and cancelled through the same checks —
+  ownership, free slot, double-booking — and every action is written to the audit log.
+- **FR10 Hosting:** the database is looked for in three places in order, so the app starts even on
+  hosts that wipe their disk; it re-seeds itself on the next start.
 
-## 7. Success metrics
-- First-response latency < 500 ms for local answers (SQLite lookup); < 1.5 s through the API.
-- Zero false-positive health answers on schedule queries (keyword-boundary test suite in repo history).
-- 15/15 knowledge rows reachable through natural phrasing.
+## 7. What has to be true when it's done
+
+- "I have a fever" returns the fever guidance and says it out loud.
+- "What is the weather" does not match any health answer.
+- "How many appointments today" returns appointments, never a health answer.
+- Dr. Amit signs in and sees his two appointments. Dr. Rahul signs in and sees only his one. Neither
+  can see the other's, whatever they ask.
+- Deleting the database file and starting again rebuilds everything.
+- If the folder is read-only, the app still starts by using a different location.
+- `npm test` passes all 40 checks on a throwaway database.
+- After a deploy, https://era-assistant.onrender.com answers `/api/health` (the first wake after an
+  idle period takes 30–50 seconds).
+
+## 8. How well it should work
+
+- Health answers come back in well under a second.
+- Health answers never appear when a clinic question was asked.
+- All 15 health topics are reachable by ordinary phrasing.
+
+## 9. Known shortfalls
+
+These are real today and are the next work list:
+
+- **Patient details are sent to NVIDIA's cloud** to be turned into speech — names, dates of birth,
+  medications. Only internal IDs are stripped before sending. This is the biggest open risk and needs
+  a decision before any real patient data is used.
+- **Signing out does not cancel a token** that was already handed out. The cookie is cleared, but the
+  token stays valid until it expires.
+- **Anyone can create a doctor account** with any email address. There is no email confirmation.
+- **The sign-in throttle lives in memory**, so it resets when the server restarts and does nothing
+  across several machines.
+- **A misheard number can cancel a real appointment.** There is no confirmation step before a write.
+- **The character has no lip sync and no backup picture.** She is an image, so her mouth doesn't move.
+- **The page needs the server for everything.** The browser's offline copy of the health answers is
+  still in the code but is never used.
+- **The generated PDFs in `docs/` are out of date.**
+- **A booking sentence that is missing the time fails** instead of asking for it in the next turn.

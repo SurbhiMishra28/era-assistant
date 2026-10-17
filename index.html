@@ -28,10 +28,17 @@
  <div class="waves" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b></div>
  <h2>Era</h2><p id="status">Ready</p>
  <p id="live" class="sr-only" aria-live="polite"></p>
- <div class="ctrl"><button id="mic" title="Talk to Era">🎤 Talk</button><button id="stop" title="Stop speaking">Stop</button><button id="openSet">⚙ Settings</button></div>
+ <div class="ctrl"><button id="mic" title="Talk to Era">🎤 Talk</button><button id="stop" title="Stop speaking">Stop</button><button id="openSet">⚙ Settings</button><button id="openChat" title="Chat history">💬 Chats</button></div>
  <div class="row"><input id="msg" placeholder="Or type — e.g. my appointments today" autocomplete="off"><button id="send">Send</button></div>
 </section>
 </main>
+<!-- ③ CHAT PANEL (v4.5) — the doctor↔Era conversation, saved per day; older days appear as tag chips -->
+<aside id="chatPanel" class="hidden" aria-label="Conversation history">
+ <div class="cphead"><h3>Conversations</h3><button id="closeChat" class="mini" title="Close the chat panel">✕ Close</button></div>
+ <div id="convTags" class="cpTags" aria-label="Past conversations"></div>
+ <div id="chatLog" class="cpLog"></div>
+ <p class="cpnote">Your conversation with Era is saved per day — pick an earlier day from the tags above.</p>
+</aside>
 <dialog id="set"><form method="dialog"><h3>Settings</h3>
 <label>Your name<input id="sName" placeholder="Dr. Sharma"></label>
 <label class="chk"><input type="checkbox" id="sVoice"> Era speaks replies</label>
@@ -39,4 +46,4 @@
 <label>NVIDIA Voice<select id="sVoiceSel"></select></label>
 <small>Era speaks ONLY in NVIDIA Sofia's voice — English, हिन्दी and Hinglish are picked automatically from each reply.</small>
 <div class="row"><button value="save" id="save">Save</button></div></form></dialog>
-<script src="db/db.js?v=4.0.0"></script><script src="app.js?v=4.0.0"></script></body></html>
+<script src="app.js?v=4.5.0"></script></body></html>

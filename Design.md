@@ -1,71 +1,110 @@
-# Design.md — Era UI
+# Design.md — How Era Looks
 
-**Version:** 2.5.0 (NVIDIA-only voice) · **Last updated:** 2026-10-01
+**Version:** 4.4 · **Last updated:** 2026-10-05
 
-## 1. Design language
-Calm clinical palette, soft rounded surfaces (radius 14–28 px), pill buttons, airy spacing.
-One accent does the work: **teal**. Everything else is quiet blues and greys.
-Typography: **Manrope** (400/600/800) via Google Fonts, fallback `system-ui, sans-serif`.
+## 1. The look
 
-## 2. Tokens (`style.css :root`)
-| Token | Value | Use |
+Calm and clinical. Soft rounded corners, pill-shaped buttons, plenty of space. One colour does the
+work — **teal**. Everything else is quiet blues and greys.
+
+Text is **Manrope** (400, 600, 800) from Google Fonts, falling back to the system font if it can't
+load.
+
+## 2. Colours (`style.css` `:root`)
+
+| Name | Value | Used for |
 |---|---|---|
-| `--bg` | `#eef5f7` | page background |
-| `--ink` | `#123240` | text |
-| `--mut` | `#5d7784` | secondary text, timestamps |
-| `--teal` | `#1f9d9a` | accent: buttons, bubbles, waves |
-| `--blue` | `#7fa8cf` | focus rings, ring gradient |
-| `--card` | `#fff` | panels |
+| `--bg` | `#eaf4f6` | Page background |
+| `--ink` | `#123240` | Text |
+| `--mut` | `#5d7784` | Secondary text |
+| `--teal` | `#1f9d9a` | Buttons, waves |
+| `--teal2` | `#0e7c7b` | Button gradient end |
+| `--blue` | `#7fa8cf` | Focus rings, outer rings |
+| `--card` | `#fff` | Panels |
+| `--err` | `#b3261e` | Errors |
 
 ## 3. Layout
-Single centered character stage (`main`, max 1100 px): one `#face` card (max 460 px wide) holds the
-whorow (identity + sign out), the SVG character stage, wave bars, status, controls and the slim
-fallback text input. No chat panel — Era's voice and presence are the interface.
 
-## 4. The character (photo, v3.7.2)
-- `assets/era3d.png` (3D character render, transparent background) is the character — visible by
-  default in `#photoWrap` (the v3.6 SVG rig was removed in v3.7.2). Floats (`float`) and breathes
-  (`breathe`); `talk` scale-pulse while speaking. Cover-cropped with `--eraPhotoW/H/X/Y` knobs in
-  `:root` (`50% 12%` default keeps the face in frame).
-- **Lip sync:** the mouth is a **clip rig** — `#mouthClipPath` (in `defs`) is swapped through the
-  `MOUTH` viseme set (rest/closed/wide/round/open/ooh) on TTS `onboundary` word events; teeth
-  (`#fdfdfd` bar) and tongue (ellipse) sit inside the clipped `#mouthGrp`. A rAF jaw loop adds
-  continuous motion; `onend` restores the rest shape.
-- **Idle life:** randomized blinks (`.eye` scaleY via JS, 0.09 s ease) + occasional brow raises
-  (JS swaps the brow `Q` control point, generic for any geometry). `.eye` needs
-  `transform-box: fill-box` for SVG scaling.
-- **Listening:** eyes squint (`.eye` scaleY .55), rings pulse red (`listen`), mic turns `#d64545`.
-- **Speaking:** wave bars animate (`bar`, staggered delays).
-- **Photo mode (v3.7):** if `assets/era3d.png` loads, `#photoWrap` (clean image, no overlay) replaces
-  the SVG and inherits the same motion — float/breathe idle, `talk` scale pulse while speaking.
-  Missing/broken file keeps the SVG rig (graceful fallback).
-- States live on `#face[data-state]`: `idle | listening | speaking`; `#status` text mirrors them.
+One centred card, at most 460px wide. Inside it, top to bottom:
 
-## 5. Replies (voice-only)
-Replies are spoken, not rendered as bubbles. `#live` (`.sr-only`, `aria-live="polite"`) carries the
-current reply text for screen readers and for when "Era speaks" is off. Chat bubbles and the
-message-entrance animation were removed with the chat panel in v3.5.
+- who is signed in, and a sign-out button
+- the character on a soft stage with two rings behind her
+- five wave bars
+- the name "Era" and a status line
+- three buttons: Talk, Stop, Settings
+- one typing box
 
-## 6. Components
-- **Two-view flow (v3.5):** ① `#auth` — doctor login/signup card only; ② `<main>` — the workspace:
-  Era herself (pop-up greeting on entry, voice loop). `.view` = fullscreen gradient screens; JS
-  `show()` toggles `.hidden`. The "Meet Era" intro card and chat panel were removed in v3.5.
-- **Chips**: quiet pill buttons (`#eef5f7` bg, `#cfe0e6` border, 0.85 rem).
-- **Settings `<dialog>`**: 24 px radius, width `min(460px, 92vw)`, dark backdrop `#123240aa`;
-  stacked labeled fields: name, "Era speaks replies", "Greet me when I start", voice select,
-  rate/pitch sliders. (Schedule editor and clear-chat-history removed with the chat panel in v3.5.)
+That's the whole screen. There is no chat panel.
 
-## 7. Accessibility & motion
-- `:focus-visible` gets a 3 px `--blue` outline everywhere.
-- `#live` (`.sr-only`) is `aria-live="polite"` — every Era reply is announced even when TTS is off;
-  mic/settings buttons carry `title` tooltips.
-- `prefers-reduced-motion: reduce` kills all animations globally.
+## 4. The character
 
-## 8. Voice UX rules
-- Era speaks only the *reply text*, ONLY in **NVIDIA Sofia's voice** (v4.0: single female voice —
-  all other personas removed) via the `/api/tts` proxy — natural, human-like delivery.
-- Settings **NVIDIA Voice** is a 2-option select: "Sofia · English" (default) / "Sofia · हिन्दी".
-  Language itself is auto-picked per reply (Devanagari/romanised Hinglish → हिन्दी Sofia).
-- Mic press stops current audio first (no overlap while listening); Stop cancels instantly.
-- Voice service unreachable → `#status` shows "Voice service unavailable"; Era stays silent until
-  NVIDIA recovers (retries + WAV cache live server-side).
+`assets/era3d.png` is the character — a 3D render on a transparent background. She floats gently and
+pulses slightly while speaking. Her framing is set by four numbers at the top of `style.css`:
+`--eraPhotoW`, `--eraPhotoH`, `--eraPhotoX`, `--eraPhotoY`. The default `50% 12%` keeps her face in
+frame.
+
+Her movement is CSS only, driven by the `data-state` attribute on `#face`:
+
+| State | What happens |
+|---|---|
+| `idle` | Slow float. This is the resting look. |
+| `listening` | Rings pulse and turn red, microphone button turns red, status says "Listening…" |
+| `speaking` | She pulses, the wave bars animate, status says "Speaking…" |
+| `denied` | Her rings turn red and the status turns red. Used when the server refuses a request, so a refusal no longer looks like idle. |
+
+**There is no lip sync.** It existed until version 3.7.2 and was removed when the character became a
+picture. The mouth-shape, blinking and eyebrow code is still in `app.js` but does nothing, because
+those drawing elements are gone from the page. If you bring it back, you need to add the elements
+back first. Don't describe it as working.
+
+**If the picture is missing,** there is no fallback character. The page will show the stage empty. The
+old promise that a missing picture falls back to a drawing is no longer true.
+
+## 5. Replies
+
+Replies are spoken, not printed as chat bubbles. The text also goes into `#live`, which is invisible
+but announced by screen readers — so the reply is available when the sound is off, and there is a
+live region for accessibility.
+
+## 6. Parts
+
+- **Two screens.** `#auth` is the sign-in card. `<main>` is the workspace. JavaScript switches between
+  them by adding or removing `hidden`.
+- **Sign-in card.** The logo, "Doctor Login", an email box, a password box, one button, a status
+  line, and a small row offering the five demo users.
+- **Buttons.** Pill shaped, teal gradient, lift slightly on hover and press down when clicked.
+- **Settings.** A native dialog, 24px corners, dark backdrop. Four things: your name, whether Era
+  speaks, whether she greets you, and which voice to use. A short note explains the voice choice.
+  Speed and pitch sliders, the schedule editor, and the clear-history button were all removed — don't
+  add them back by accident when reading older versions of this file.
+
+## 7. Access and motion
+
+- Every button, input and select has a 3px blue focus ring.
+- `#live` announces every reply.
+- Buttons carry `title` tooltips.
+- `prefers-reduced-motion: reduce` switches off all animation.
+
+## 8. Voice behaviour
+
+- Era speaks only the reply text, only in NVIDIA Sofia's voice.
+- The Settings voice list has two options: Sofia in English, and Sofia in हिन्दी. Which one is used
+  is decided per reply — Hindi or Hinglish text gets the Hindi voice.
+- Pressing the microphone stops whatever is playing first, so the two never overlap.
+- Stop cuts off immediately.
+- If the voice service can't be reached, the status line says so and Era stays quiet. Retrying and the
+  saved audio are handled on the server.
+
+## 9. Known design gaps
+
+- The character has no expression while listening, and no lip movement while speaking, because those
+  effects needed the drawing rig that was removed in 3.7.2.
+- There is no visible indication that sound is switched off. If "Era speaks replies" is unticked, the
+  only sign is that nothing comes out.
+- The red `denied` styling shows only as long as Era is speaking. When the reply finishes she returns
+  to her normal look, so a refusal is easy to miss if you weren't watching.
+- The reply text lives in an invisible screen-reader region. There is no on-screen transcript, so a
+  doctor who can't hear her has nothing to read either.
+- If `assets/era3d.png` is missing the stage is simply empty — no fallback character exists. The
+  Render deploy always ships the image, but a locally deleted asset leaves a blank stage with only
+  the status line alive.
