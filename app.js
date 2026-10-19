@@ -5,8 +5,8 @@ const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 // ---- rms session: identity comes from the server (JWT cookie), never from this page (spec §AUTH)
 const api=async(p,o={})=>{const r=await fetch(p,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...o});return{status:r.status,data:await r.json().catch(()=>({}))}};
 let ME=null;
-const loadMe=async()=>{try{const{status,data}=await api('/api/assistant/me');if(status===200){ME=data.user;showWho();return true}return false}catch{return false}};
-const demoLogin=async who=>{try{const{status,data}=await api('/api/assistant/demo-login',{method:'POST',body:JSON.stringify({who})});if(status===200){ME=data.user;showWho();return true}}catch{}
+const loadMe=async()=>{try{const{status,data}=await api('/api/assistant/me');if(status===200){ME=data.user;return true}return false}catch{return false}};
+const demoLogin=async who=>{try{const{status,data}=await api('/api/assistant/demo-login',{method:'POST',body:JSON.stringify({who})});if(status===200){ME=data.user;return true}}catch{}
  return false};
 // two views only: auth → workspace (Era herself is the interface; no intro card — chat history lives in the v4.5 drawer)
 const show=v=>{$('#auth').classList.toggle('hidden',v!=='auth');document.querySelector('main').classList.toggle('hidden',v!=='app')};
@@ -23,11 +23,10 @@ const showApp=async()=>{show('app');setState('idle','Ready');startLife();refresh
 $('#loginF').onsubmit=async e=>{e.preventDefault();const m=$('#authMsg');
  m.className='authmsg';m.textContent='Signing you in…';
  const{status,data}=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:$('#liEmail').value.trim(),password:$('#liPass').value})});
- if(status===200||status===201){ME=data.user;showWho();
+ if(status===200||status===201){ME=data.user;
   m.className='authmsg ok';m.textContent=data.created?`Account created — welcome, ${ME.name}!`:`Welcome back, ${ME.name}!`;
   setTimeout(showApp,450)}
  else{m.className='authmsg err';m.textContent=data.message||'Could not sign you in. Please try again.'}};
-const showWho=()=>{const w=$('#who');if(w)w.textContent=ME?`${ME.name} · ${ME.role}${ME.doctorId?' · doctor #'+ME.doctorId:''}`:''};
 let S=Object.assign({name:'',voice:true,greet:true,ttsVoice:'Magpie-Multilingual.EN-US.Sofia'},load(KEY.set,{})); // v3.9: NVIDIA voices ONLY
 const face=$('#face'),setState=(s,t)=>{face.dataset.state=s;$('#status').textContent=t};
 // ---- character photo (v3.7.2): assets/era3d.png IS the character — plain <img>, no JS needed.
@@ -159,7 +158,7 @@ $('#closeChat').onclick=()=>panel.classList.add('hidden');
 async function doLogout(){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}
  try{sessionStorage.removeItem('era_greeted')}catch{}
  stopSpeak();
- ME=null;stopLife();showWho();show('auth');
+ ME=null;stopLife();show('auth');
  chatLog.innerHTML='';convTags.innerHTML='';convList=[];activeConv='today';panel.classList.add('hidden')}
 $('#logout').onclick=doLogout;
 $('#demoBtn').onclick=async()=>{const m=$('#authMsg');m.className='authmsg';m.textContent='Signing in with demo account…';

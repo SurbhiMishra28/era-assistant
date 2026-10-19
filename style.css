@@ -40,7 +40,8 @@ main{display:grid;grid-template-columns:1fr;place-items:center;max-width:1100px;
 #photoWrap{position:relative;z-index:2;animation:float 4.5s ease-in-out infinite,breathe 4.5s ease-in-out infinite;transform-origin:bottom center}
 #eraPhoto{display:block;width:var(--eraPhotoW);max-width:72vw;height:var(--eraPhotoH);object-fit:cover;object-position:var(--eraPhotoX) var(--eraPhotoY);border-radius:16px;box-shadow:0 14px 34px #1f9d9a2e}
 [data-state=speaking] #photoWrap{animation:float 4.5s ease-in-out infinite,talk .5s ease-in-out infinite}
-.ring{position:absolute;bottom:20px;width:230px;height:230px;border-radius:50%;background:radial-gradient(#7fa8cf55,#1f9d9a11);z-index:1;animation:glow 4s ease-in-out infinite}
+.rings{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none} /* clip the glow circles so they never spill outside the stage */
+.ring{position:absolute;bottom:20px;left:50%;translate:-50% 0;width:230px;height:230px;border-radius:50%;background:radial-gradient(#7fa8cf55,#1f9d9a11);animation:glow 4s ease-in-out infinite}
 .r2{width:280px;height:280px;opacity:.5;animation-delay:-2s}
 [data-state=listening] .ring{animation:listen 1.2s ease-out infinite;background:#e0555522}
 .waves{display:flex;gap:5px;height:26px;align-items:center;margin-top:.5rem;opacity:0;transition:opacity .3s}
@@ -55,8 +56,7 @@ main{display:grid;grid-template-columns:1fr;place-items:center;max-width:1100px;
 [data-state=speaking] #status{background:#e0f4f0;color:var(--teal2)}
 [data-state=denied] #status{background:#fdecec;color:var(--err);font-weight:700}
 [data-state=denied] .ring{background:#e0555522}
-.who{margin:0;color:var(--mut);font-size:.8rem;font-weight:600;letter-spacing:.02em}
-.whorow{display:flex;gap:.4rem;align-items:center;justify-content:space-between;width:100%}
+.whorow{display:flex;gap:.4rem;align-items:center;justify-content:flex-end;width:100%}
 button.mini{background:#e3eef3;color:var(--ink);font-size:.75rem;padding:.32rem .75rem;font-weight:700;box-shadow:0 2px 6px #12324014}
 button.mini:hover{background:#d3e5ec;transform:none;box-shadow:0 3px 10px #1232401f}
 .ctrl{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
