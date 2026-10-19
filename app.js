@@ -110,15 +110,14 @@ async function ask(text){text=String(text||'').trim();if(!text)return;
   else if(status>=400)r=data.message||'Something went wrong. Please try again.';
  }catch(e){console.warn('chat API unreachable',e);r='I cannot reach the clinic server right now. Please check the connection and try again.'}
  const reply=r||'I did not catch that. Could you ask again?';bubble('era',reply);speak(reply);loadConvos()}
-// ---- voice in (mic) + slim text fallback
+// ---- voice only (mic): the stage takes spoken input; the text box was removed in v4.5.1
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec;
-$('#mic').onclick=()=>{if(!SR)return speak('Voice input needs Chrome or Edge. You can type instead.');
+$('#mic').onclick=()=>{if(!SR)return speak('Voice input needs Chrome or Edge.');
  stopSpeak();rec=new SR();rec.lang='en-IN';rec.onstart=()=>setState('listening','Listening…');
  rec.onresult=e=>ask(e.results[0][0].transcript);
  rec.onerror=()=>setState('idle','Could not hear you. Try again.');
  rec.onend=()=>{if(face.dataset.state==='listening')setState('idle','Ready')};rec.start()};
 $('#stop').onclick=()=>{stopSpeak();rec&&rec.abort();setState('idle','Ready')};
-$('#send').onclick=()=>{ask($('#msg').value);$('#msg').value=''};$('#msg').onkeydown=e=>e.key==='Enter'&&$('#send').click();
 // ---- chat panel (v4.5): every exchange is saved per day on the server; this drawer shows the
 // doctor↔Era history with past days as tag chips. A read-only mirror — the stage stays voice-first.
 const panel=$('#chatPanel'),chatLog=$('#chatLog'),convTags=$('#convTags');

@@ -64,7 +64,6 @@ button.mini:hover{background:#d3e5ec;transform:none;box-shadow:0 3px 10px #12324
 .ctrl button:nth-child(2):hover,.ctrl button:nth-child(3):hover,.ctrl button:nth-child(4):hover{background:#d3e5ec}
 [data-state=listening] #mic{background:linear-gradient(135deg,#d64545,#b73232)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-#face .row{width:min(340px,90vw);margin-top:.85rem}
 input,select,textarea{font:inherit;width:100%;padding:.65rem 1rem;border:1.5px solid #d5e5ea;border-radius:14px;background:#fff;
  transition:border-color .15s ease,box-shadow .15s ease}
 input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 4px #1f9d9a1f;outline:none}
